@@ -29,7 +29,8 @@
                 connection.start().then(function (connectionId) {
                     statusShow();
                     $('#loading').hide();
-
+                    //connection.invoke("GetNames");
+                    connection.invoke('GetNamesByGroup');
                 }).catch(function (err) {
                     console.error(err);
                     setTimeout(() => start(), 2000);
@@ -66,14 +67,83 @@
             connection.on("Notify", (teamCount) => {
                 $('#notify').html(`<div class="alert alert-success mt-2">${teamCount}</div>`)
             })
+            connection.on("ReceiceNames", (names) => {
+                $('#namesList').empty();
+                names.forEach((el, index) => {
+                    $('#namesList').append(`<li class="list-group-item">${el}</li>`)
+                });
+            })
+            connection.on("Error", (err) => {
 
+                alert(err);
+            });
+            connection.on('ReciveNamesByGroup', (data) => {
+                $('#aTeamList').empty();
+                $('#bTeamList').empty();
+                if (data[0].teamName === 'Team A') {
+
+                    data[0].users.forEach((el, index) => {
+
+                        $('#aTeamList').append(`<li class="list-group-item">${el.name}</li>`)
+                    })
+
+                }
+                if (data[1].teamName === 'Team B') {
+                    console.log(data[1].teamName);
+                    data[1].users.forEach((el, index) => {
+
+                        $('#bTeamList').append(`<li class="list-group-item">${el.name}</li>`)
+                    })
+                }
+                console.log(data);
+            })
+            connection.on("ReceiveMessageByGroup", (name, teamName) => {
+                console.log(name, teamName);
+                let listName = '';
+                if (teamName === 'Team A') {
+                    listName = 'aTeamList';
+                }
+                else {
+                    listName = 'bTeamList';
+                }
+
+                $(`#${listName}`).append(`<li class="list-group-item">${name}</li>`)
+            });
+
+            connection.on('ReceiveProduct', (product) => {
+                console.log(product);
+            })
             //button
+
+            $('#btnProduct').click(() => {
+                var product = { "Id": 1, 'Name': 'Kalem', 'Stock': 3, 'Price': 4.3 };
+                connection.invoke('SendProduct', product);
+            })
             $('#btnNameSave').click(() => {
                 connection.invoke("SendName", $('#txtName').val()).
                     catch((err) => console.log(err));
             });
 
-            
+            $('#btnNameTeam').click(() => {
+                let name = $('#txtName').val();
+               
+                $('#txtName').val('').focus();
+                var teamName = $('input[type="radio"]:checked').val();
+
+                connection.invoke('SendNameByGroup', name, teamName).catch(err => console.log(err));
+
+            });
+            $('input[type="radio"]').change(() => {
+                let value = $('input[type="radio"]:checked').val();
+                console.log(value);
+                if (value === 'Team A') {
+                    connection.invoke("AddToGroup", value);
+                    connection.invoke('RemoveToGroup', 'Team B');
+                } else {
+                    connection.invoke("AddToGroup", value);
+                    connection.invoke('RemoveToGroup', 'Team A');
+                }
+            })
         })
     </script>
 }
@@ -81,8 +151,20 @@
 <div class="row">
     <div class="col-md-8 offset-2">
         <input type="text" class="form-control" id="txtName" />
+        <div class="col-md-8">
+            <div class="form-check form-check-inline">
+                <input id="ateam" type="radio" name="teamGroup" value="Team A" class="form-check-input" />
+                <label for="ateam" class="form-check-label">A Takımı</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input id="bteam" type="radio" name="teamGroup" value="Team B" class="form-check-input" />
+                <label for="bteam" class="form-check-label">B Takımı</label>
+            </div>
+        </div>
         <hr />
         <button class="btn btn-primary" id="btnNameSave">Isim Kaydet</button>
+        <button class="btn btn-warning" id="btnNameTeam">Isim Kaydet(Takim)</button>
+        <button class="btn btn-danger" id="btnProduct">Urun Kaydet</button>
         <div class="alert alert-info mt-2">
             <div class="d-flex justify-content-lg-between">
                 <div>
@@ -99,8 +181,19 @@
         <div id="notify"></div>
     </div>
     <br />
+</div>
+<div class="row">
+
     <div class="col-md-8 offset-2">
-        <ul class="list-group" id="namesList">
-        </ul>
+        <div class="row">
+            <div class="col-md-6">
+                <ul class="list-group" id="aTeamList">
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <ul class="list-group" id="bTeamList">
+                </ul>
+            </div>
+        </div>
     </div>
 </div>
