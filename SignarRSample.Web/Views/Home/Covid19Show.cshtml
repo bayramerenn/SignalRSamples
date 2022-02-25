@@ -1,0 +1,55 @@
+﻿@{
+    ViewData["Title"] = "Covid19Show";
+}
+
+@section Scripts{
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var covidChartList = new Array();
+            covidChartList.push(["Tarih", "İstanbul", "Ankara", "İzmir", "Giresun","Antalya"]);
+            connection = new signalR.HubConnectionBuilder()
+                //.configureLogging(signalR.LogLevel.Information)
+                .withUrl("https://localhost:5001/covidHub")
+                .withAutomaticReconnect([1000, 1000, 1000, 1000])
+                .build();
+
+            connection.start().then(function (connectionId) {
+                connection.invoke('GetCovidList');
+            }).catch(function (err) {
+                console.error(err);
+            });
+
+            connection.on("ReceiveCovidList", (covidList) => {
+                covidChartList = covidChartList.slice(0, 1);
+                covidList.forEach((item) => {
+                    covidChartList.push([item.covidDate, item.istanbul, item.ankara, item.izmir, item.giresun, item.antalya]);
+                    
+                })
+                google.charts.load('current', { 'packages': ['corechart'] });
+                google.charts.setOnLoadCallback(drawChart);
+
+            });
+            console.log(covidChartList);
+            function drawChart() {
+                var data = google.visualization.arrayToDataTable(
+                    covidChartList
+                );
+
+                var options = {
+                    title: 'Company Performance',
+                    curveType: 'none',
+                    legend: { position: 'bottom' }
+                };
+                var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+
+                chart.draw(data, options);
+            }
+        });
+
+        
+    </script>
+}
+
+<div id="curve_chart" style="width: 1200px; height: 800px"></div>
